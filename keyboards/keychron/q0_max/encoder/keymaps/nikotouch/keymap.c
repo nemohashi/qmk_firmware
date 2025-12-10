@@ -264,18 +264,18 @@ static bool is_nikotouch_key(uint16_t keycode) {
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [BASE] = LAYOUT_tenkey_27(
         KC_MUTE, KC_ESC,  KC_DEL,  KC_TAB,  KC_BSPC,
-        MC_1,    KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS,
-        MC_2,    KC_P7,   KC_P8,   KC_P9,   KC_PPLS,
-        MC_3,    KC_P4,   KC_P5,   KC_P6,
-        MC_4,    KC_P1,   KC_P2,   KC_P3,   KC_PENT,
-        MO(FN),  KC_P0,            KC_PDOT          ),
+        NK_M1,   KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS,
+        NK_M2,   KC_P7,   KC_P8,   KC_P9,   KC_PPLS,
+        NK_M3,   KC_P4,   KC_P5,   KC_P6,
+        NK_M4,   KC_P1,   KC_P2,   KC_P3,   KC_PENT,
+        NK_M5,   KC_P0,            KC_PDOT          ),
 
     [FN] = LAYOUT_tenkey_27(
         RGB_TOG, BT_HST1, BT_HST2, BT_HST3, P2P4G,
-        _______, RGB_MOD, RGB_VAI, RGB_HUI, _______,
-        _______, RGB_RMOD,RGB_VAD, RGB_HUD, _______,
-        _______, RGB_SAI, RGB_SPI, KC_MPRV,
-        _______, RGB_SAD, RGB_SPD, KC_MPLY, _______,
+        NK_M1,   RGB_MOD, RGB_VAI, RGB_HUI, _______,
+        NK_M2,   RGB_RMOD,RGB_VAD, RGB_HUD, _______,
+        NK_M3,   RGB_SAI, RGB_SPI, KC_MPRV,
+        NK_M4,   RGB_SAD, RGB_SPD, KC_MPLY, _______,
         _______, RGB_TOG,          KC_MNXT          ),
 
     [NIKOTOUCH] = LAYOUT_tenkey_27(
@@ -326,8 +326,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
-    // キーリリース時は基本的に何もしない（一部例外あり）
+    // NK_M5（FNレイヤー切替）のリリース処理
     if (!record->event.pressed) {
+        if (keycode == NK_M5) {
+            layer_off(FN);
+            return false;
+        }
         return true;
     }
 
