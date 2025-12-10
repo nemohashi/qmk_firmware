@@ -207,24 +207,6 @@ static void star_clear(void) {
     star2_next = NULL;
 }
 
-// 文字列の長さを取得（Backspace送信用）
-static uint8_t get_output_length(const char *str) {
-    if (str == NULL) return 0;
-    uint8_t len = 0;
-    while (*str) {
-        len++;
-        str++;
-    }
-    return len;
-}
-
-// Backspaceを指定回数送信
-static void send_backspaces(uint8_t count) {
-    for (uint8_t i = 0; i < count; i++) {
-        tap_code(KC_BSPC);
-    }
-}
-
 // ニコタッチ変換テーブルを検索
 static const nikotouch_entry_t* find_nikotouch_entry(uint8_t key1, uint8_t key2) {
     for (uint8_t i = 0; i < NIKOTOUCH_TABLE_SIZE; i++) {
@@ -395,9 +377,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             star_count++;
 
             if (star_count == 1 && star1_next != NULL) {
-                // *1回目変換
-                uint8_t bs_count = get_output_length(star_buffer);
-                send_backspaces(bs_count);
+                // *1回目変換（1文字分だけBackspace）
+                tap_code(KC_BSPC);
                 send_string(star1_next);
 
                 if (star2_next != NULL) {
@@ -408,9 +389,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     star_clear();
                 }
             } else if (star_count == 2 && star2_next != NULL) {
-                // *2回目変換
-                uint8_t bs_count = get_output_length(star_buffer);
-                send_backspaces(bs_count);
+                // *2回目変換（1文字分だけBackspace）
+                tap_code(KC_BSPC);
                 send_string(star2_next);
                 star_clear();
             } else {
