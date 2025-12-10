@@ -272,7 +272,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [FN] = LAYOUT_tenkey_27(
         RGB_TOG, BT_HST1, BT_HST2, BT_HST3, P2P4G,
-        NK_M1,   RGB_MOD, RGB_VAI, RGB_HUI, _______,
+        NK_M1,   RGB_MOD, RGB_VAI, RGB_HUI, QK_BOOT,
         NK_M2,   RGB_RMOD,RGB_VAD, RGB_HUD, _______,
         NK_M3,   RGB_SAI, RGB_SPI, KC_MPRV,
         NK_M4,   RGB_SAD, RGB_SPD, KC_MPLY, _______,
@@ -326,10 +326,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
-    // NK_M5（FNレイヤー切替）のリリース処理
+    // キーリリース時の処理
     if (!record->event.pressed) {
+        // NK_M5（FNレイヤー切替）のリリース処理
         if (keycode == NK_M5) {
             layer_off(FN);
+            return false;
+        }
+        // NK_BS（Backspace）のリリース処理
+        if (keycode == NK_BS) {
+            unregister_code(KC_BSPC);
             return false;
         }
         return true;
@@ -369,13 +375,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 niko_clear();
                 return false;
             } else if (star_mode) {
-                // *バッファがある場合はクリア + Backspace送信
+                // *バッファがある場合はクリア + Backspace送信（1回のみ）
                 star_clear();
                 tap_code(KC_BSPC);
                 return false;
             } else {
-                // 通常のBackspace
-                tap_code(KC_BSPC);
+                // 通常のBackspace（キーリピート対応）
+                register_code(KC_BSPC);
                 return false;
             }
 
