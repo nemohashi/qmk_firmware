@@ -144,12 +144,12 @@ static const nikotouch_entry_t nikotouch_table[] = {
     {7, 8, "r", NULL, NULL},
     {7, 9, "s", NULL, NULL},
     {7, 0, "7", NULL, NULL},
-    // 8 + X: や行
-    {8, 1, "ya", NULL, NULL},
-    {8, 2, "yu", NULL, NULL},
-    {8, 3, "yo", NULL, NULL},
-    {8, 4, "lya", NULL, NULL},
-    {8, 5, "lyu", NULL, NULL},
+    // 8 + X: や行（母音位置に合わせた配置）
+    {8, 1, "ya", "lya", NULL},
+    {8, 2, "lya", NULL, NULL},
+    {8, 3, "yu", "lyu", NULL},
+    {8, 4, "lyu", NULL, NULL},
+    {8, 5, "yo", "lyo", NULL},
     {8, 6, "lyo", NULL, NULL},
     {8, 7, "t", NULL, NULL},
     {8, 8, "u", NULL, NULL},
@@ -188,10 +188,15 @@ static uint8_t niko_buffer = 0xFF;           // 1回目のキー (0xFF = 未入�
 static uint16_t niko_buffer_time = 0;        // 1回目キー押下時刻
 static bool niko_consonant_displayed = false; // 子音文字を表示したかどうか
 static bool star_mode = false;               // *入力待ちモード
-static uint8_t star_count = 0;               // *を押した回数 (0, 1, 2)
-static const char *star_buffer = NULL;       // *バッファ（現在の出力文字列）
-static const char *star1_next = NULL;        // 次の*1回目変換
-static const char *star2_next = NULL;        // 次の*2回目変換
+static uint8_t star_state = 0;               // 現在の*状態 (0=無変換, 1=*1回目, 2=*2回目)
+static const char *star_output[3];           // 各状態の出力文字列 [0]=無変換, [1]=*1回目, [2]=*2回目
+static uint8_t star_max_state = 0;           // 最大状態数（1 or 2 or 3）
+
+// M5のLT機能用
+static bool m5_pressed = false;              // M5が押されているか
+static uint16_t m5_timer = 0;                // M5押下時刻
+static bool m5_is_hold = false;              // M5がホールドとして扱われたか
+#define TAPPING_TERM_M5 200                  // タップ/ホールド判定時間（ミリ秒）
 
 // ニコタッチ状態をクリア
 static void niko_clear(void) {
@@ -203,10 +208,11 @@ static void niko_clear(void) {
 // *モードをクリア
 static void star_clear(void) {
     star_mode = false;
-    star_count = 0;
-    star_buffer = NULL;
-    star1_next = NULL;
-    star2_next = NULL;
+    star_state = 0;
+    star_output[0] = NULL;
+    star_output[1] = NULL;
+    star_output[2] = NULL;
+    star_max_state = 0;
 }
 
 // ニコタッチ変換テーブルを検索
@@ -297,9 +303,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [NIKOSHIFT] = LAYOUT_tenkey_27(
         _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______,
-        _______, KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT,
+        _______, KC_LEFT, KC_DOWN, KC_UP,   S(KC_ENT),
         _______, _______, _______, _______,
-        _______, _______, _______, _______, _______,
+        _______, _______, _______, _______, S(KC_ENT),
         _______, _______,          _______          )
 };
 // clang-format on
@@ -327,6 +333,15 @@ void matrix_scan_user(void) {
             niko_clear();
         }
     }
+
+    // M5のホールド判定
+    if (m5_pressed && !m5_is_hold) {
+        if (timer_elapsed(m5_timer) > TAPPING_TERM_M5) {
+            // タップ時間を超えた = ホールドとして扱う
+            m5_is_hold = true;
+            layer_on(FN);
+        }
+    }
 }
 
 // ============================================================
@@ -338,13 +353,51 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
+    // カスタムキー処理（press/releaseどちらも処理が必要なもの）
+    switch (keycode) {
+        // M4: MO(FN) - 押している間だけFNレイヤー
+        case NK_M4:
+            if (record->event.pressed) {
+                layer_on(FN);
+            } else {
+                layer_off(FN);
+            }
+            return false;
+
+        // M5: LT(FN, NK_STAR) - タップで*、ホールドでFN
+        case NK_M5:
+            if (record->event.pressed) {
+                // 押された
+                m5_pressed = true;
+                m5_timer = timer_read();
+                m5_is_hold = false;
+            } else {
+                // 離された
+                if (!m5_is_hold) {
+                    // タップとして扱う = *キーの処理
+                    if (!star_mode) {
+                        // *入力待ちモードでない場合は無視
+                        m5_pressed = false;
+                        return false;
+                    }
+
+                    // 次の状態に進む（ループ）
+                    star_state = (star_state + 1) % star_max_state;
+                    
+                    // 1文字削除して次の文字を送信
+                    tap_code(KC_BSPC);
+                    send_string(star_output[star_state]);
+                } else {
+                    // ホールドとして扱われた = FNレイヤーをオフ
+                    layer_off(FN);
+                }
+                m5_pressed = false;
+            }
+            return false;
+    }
+
     // キーリリース時の処理
     if (!record->event.pressed) {
-        // NK_M5（FNレイヤー切替）のリリース処理
-        if (keycode == NK_M5) {
-            layer_off(FN);
-            return false;
-        }
         // NK_BS（Backspace）のリリース処理
         if (keycode == NK_BS) {
             unregister_code(KC_BSPC);
@@ -353,7 +406,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         return true;
     }
 
-    // カスタムキー処理
+    // 以降はキープレス時のみの処理
     switch (keycode) {
         // M1: BASEレイヤー + 英数（日本語OFF）
         case NK_M1:
@@ -369,15 +422,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             star_clear();
             return false;
 
-        // M3, M4: 未割り当て
+        // M3: 未割り当て
         case NK_M3:
-        case NK_M4:
-            return false;
-
-        // M5: MO(FN) と同等
-        case NK_M5:
-            // MO(FN)はキーマップで直接扱えないので、ここで処理
-            layer_on(FN);
             return false;
 
         // Backspace（ニコタッチバッファクリア機能付き）
@@ -407,29 +453,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 return false;
             }
 
-            star_count++;
-
-            if (star_count == 1 && star1_next != NULL) {
-                // *1回目変換（1文字分だけBackspace）
-                tap_code(KC_BSPC);
-                send_string(star1_next);
-
-                if (star2_next != NULL) {
-                    // *2回目変換がある場合は継続
-                    star_buffer = star1_next;
-                } else {
-                    // *2回目変換がない場合は終了
-                    star_clear();
-                }
-            } else if (star_count == 2 && star2_next != NULL) {
-                // *2回目変換（1文字分だけBackspace）
-                tap_code(KC_BSPC);
-                send_string(star2_next);
-                star_clear();
-            } else {
-                // これ以上変換がない
-                star_clear();
-            }
+            // 次の状態に進む（ループ）
+            star_state = (star_state + 1) % star_max_state;
+            
+            // 1文字削除して次の文字を送信
+            tap_code(KC_BSPC);
+            send_string(star_output[star_state]);
+            
             return false;
 
         // ニコタッチ数字キー (NK_0 〜 NK_9)
@@ -463,10 +493,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         // *入力待ちモードの設定
                         if (entry->star1 != NULL) {
                             star_mode = true;
-                            star_count = 0;
-                            star_buffer = entry->output;
-                            star1_next = entry->star1;
-                            star2_next = entry->star2;
+                            star_state = 0;
+                            star_output[0] = entry->output;
+                            star_output[1] = entry->star1;
+                            star_output[2] = entry->star2;
+                            
+                            // 最大状態数を計算
+                            if (entry->star2 != NULL) {
+                                star_max_state = 3;  // 無変換、*1回目、*2回目
+                            } else {
+                                star_max_state = 2;  // 無変換、*1回目
+                            }
                         }
                     }
                     // 該当なしの場合は何も送信しない
@@ -478,17 +515,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             break;
     }
 
-    // *入力待ちモード中に他のキーが押された場合
-    if (star_mode && keycode != NK_STAR) {
+    // *入力待ちモード中に他のキーが押された場合（M5とNK_STARは除外）
+    // ただし、M5がホールド判定された場合（FNレイヤーが有効）は除外
+    if (star_mode && keycode != NK_STAR && keycode != NK_M5 && !m5_is_hold) {
         star_clear();
     }
 
     return true;
-}
-
-// M5キーリリース時の処理
-void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (keycode == NK_M5 && !record->event.pressed) {
-        layer_off(FN);
-    }
 }
