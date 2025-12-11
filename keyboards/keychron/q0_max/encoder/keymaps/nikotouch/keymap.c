@@ -186,6 +186,7 @@ static const nikotouch_entry_t nikotouch_table[] = {
 // ============================================================
 static uint8_t niko_buffer = 0xFF;           // 1回目のキー (0xFF = 未入力)
 static uint16_t niko_buffer_time = 0;        // 1回目キー押下時刻
+static bool niko_consonant_displayed = false; // 子音文字を表示したかどうか
 static bool star_mode = false;               // *入力待ちモード
 static uint8_t star_count = 0;               // *を押した回数 (0, 1, 2)
 static const char *star_buffer = NULL;       // *バッファ（現在の出力文字列）
@@ -196,6 +197,7 @@ static const char *star2_next = NULL;        // 次の*2回目変換
 static void niko_clear(void) {
     niko_buffer = 0xFF;
     niko_buffer_time = 0;
+    niko_consonant_displayed = false;
 }
 
 // *モードをクリア
@@ -215,6 +217,30 @@ static const nikotouch_entry_t* find_nikotouch_entry(uint8_t key1, uint8_t key2)
         }
     }
     return NULL;
+}
+
+// 子音文字を送信（Shift+アルファベット）
+static void send_consonant(uint8_t niko_num) {
+    uint16_t keycode = KC_NO;
+    
+    switch (niko_num) {
+        case 1: keycode = KC_A; break;  // A
+        case 2: keycode = KC_K; break;  // K
+        case 3: keycode = KC_S; break;  // S
+        case 4: keycode = KC_T; break;  // T
+        case 5: keycode = KC_N; break;  // N
+        case 6: keycode = KC_H; break;  // H
+        case 7: keycode = KC_M; break;  // M
+        case 8: keycode = KC_Y; break;  // Y
+        case 9: keycode = KC_R; break;  // R
+        case 0: keycode = KC_W; break;  // W
+        default: return;
+    }
+    
+    // Shift + アルファベットで大文字を送信
+    register_code(KC_LSFT);
+    tap_code(keycode);
+    unregister_code(KC_LSFT);
 }
 
 // NK_1〜NK_0 を数値 0〜9 に変換
@@ -294,6 +320,10 @@ void matrix_scan_user(void) {
     // ニコバッファのタイムアウトチェック
     if (niko_buffer != 0xFF) {
         if (timer_elapsed(niko_buffer_time) > NIKOTOUCH_TIMEOUT_MS) {
+            // タイムアウト時、子音文字が表示されていたらBackspaceで削除
+            if (niko_consonant_displayed) {
+                tap_code(KC_BSPC);
+            }
             niko_clear();
         }
     }
@@ -353,7 +383,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         // Backspace（ニコタッチバッファクリア機能付き）
         case NK_BS:
             if (niko_buffer != 0xFF) {
-                // ニコバッファがある場合はクリアのみ
+                // ニコバッファがある場合：子音文字が表示されていたら削除してからクリア
+                if (niko_consonant_displayed) {
+                    tap_code(KC_BSPC);
+                }
                 niko_clear();
                 return false;
             } else if (star_mode) {
@@ -410,11 +443,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
 
                 if (niko_buffer == 0xFF) {
-                    // 1回目のキー入力
+                    // 1回目のキー入力：子音文字を表示
                     niko_buffer = num;
                     niko_buffer_time = timer_read();
+                    send_consonant(num);
+                    niko_consonant_displayed = true;
                 } else {
-                    // 2回目のキー入力
+                    // 2回目のキー入力：子音文字を削除してから変換後の文字列を送信
+                    if (niko_consonant_displayed) {
+                        tap_code(KC_BSPC);
+                    }
+                    
                     const nikotouch_entry_t *entry = find_nikotouch_entry(niko_buffer, num);
 
                     if (entry != NULL) {
