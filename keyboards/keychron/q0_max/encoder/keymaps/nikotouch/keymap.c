@@ -95,7 +95,7 @@ static const nikotouch_entry_t nikotouch_table[] = {
     {3, 3, "su", "zu", NULL},
     {3, 4, "se", "ze", NULL},
     {3, 5, "so", "zo", NULL},
-    {3, 6, ",", NULL, NULL},
+    {3, 6, "-", NULL, NULL},
     {3, 7, "d", NULL, NULL},
     {3, 8, "e", NULL, NULL},
     {3, 9, "f", NULL, NULL},
@@ -117,7 +117,7 @@ static const nikotouch_entry_t nikotouch_table[] = {
     {5, 3, "nu", NULL, NULL},
     {5, 4, "ne", NULL, NULL},
     {5, 5, "no", NULL, NULL},
-    {5, 6, ",", NULL, NULL},
+    {5, 6, "[", NULL, NULL},
     {5, 7, "j", NULL, NULL},
     {5, 8, "k", NULL, NULL},
     {5, 9, "l", NULL, NULL},
@@ -128,7 +128,7 @@ static const nikotouch_entry_t nikotouch_table[] = {
     {6, 3, "hu", "bu", "pu"},
     {6, 4, "he", "be", "pe"},
     {6, 5, "ho", "bo", "po"},
-    {6, 6, ",", NULL, NULL},
+    {6, 6, "]", NULL, NULL},
     {6, 7, "m", NULL, NULL},
     {6, 8, "n", NULL, NULL},
     {6, 9, "o", NULL, NULL},
@@ -303,9 +303,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [NIKOSHIFT] = LAYOUT_tenkey_27(
         _______, _______, _______, _______, _______,
         _______, _______, _______, _______, _______,
-        _______, KC_LEFT, KC_DOWN, KC_UP,   S(KC_ENT),
-        _______, _______, _______, _______,
-        _______, _______, _______, _______, S(KC_ENT),
+        _______, KC_LEFT, KC_DOWN, KC_UP,   KC_RIGHT,
+        _______, KC_LEFT, KC_DOWN, KC_UP,
+        _______, _______, _______, _______, _______,
         _______, _______,          _______          )
 };
 // clang-format on
@@ -486,7 +486,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     
                     const nikotouch_entry_t *entry = find_nikotouch_entry(niko_buffer, num);
 
-                    if (entry != NULL) {
+                    if (entry != NULL && entry->output != NULL) {
                         // 変換テーブルに該当
                         send_string(entry->output);
 
