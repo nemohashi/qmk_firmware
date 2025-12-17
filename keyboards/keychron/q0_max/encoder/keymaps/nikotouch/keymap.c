@@ -23,6 +23,11 @@
 #define NIKOTOUCH_TIMEOUT_MS 3000  // タイムアウト時間（ミリ秒）
 
 // ============================================================
+// 56式コンボ設定
+// ============================================================
+#define COMBO_TERM_56 50  // コンボ検出時間（ミリ秒）
+
+// ============================================================
 // カスタムキーコード
 // ============================================================
 enum custom_keycodes {
@@ -43,6 +48,8 @@ enum custom_keycodes {
     NK_M3,       // M3: 未割り当て
     NK_M4,       // M4: 未割り当て
     NK_M5,       // M5: MO(FN)
+    CMB_56,      // 5+6 コンボ（濁点変換）
+    CMB_45,      // 4+5 コンボ（0キー相当）
 };
 
 // ============================================================
@@ -54,6 +61,35 @@ enum layers {
     NIKOTOUCH,
     NIKOSHIFT,
 };
+
+// ============================================================
+// 56式コンボ定義
+// ============================================================
+enum combos {
+    COMBO_56_STAR,  // 5+6 = 濁点（*キー相当）
+    COMBO_45_ZERO,  // 4+5 = 0キー相当
+    COMBO_COUNT
+};
+
+// コンボキー定義（NIKOTOUCHレイヤーのキーを使用）
+const uint16_t PROGMEM combo_56[] = {NK_5, NK_6, COMBO_END};
+const uint16_t PROGMEM combo_45[] = {NK_4, NK_5, COMBO_END};
+
+combo_t key_combos[COMBO_COUNT] = {
+    [COMBO_56_STAR] = COMBO(combo_56, CMB_56),
+    [COMBO_45_ZERO] = COMBO(combo_45, CMB_45),
+};
+
+// コンボのタイミング設定
+uint16_t get_combo_term(uint16_t index, combo_t *combo) {
+    return COMBO_TERM_56;
+}
+
+// コンボをNIKOTOUCHレイヤーでのみ有効にする
+bool combo_should_trigger(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record) {
+    // NIKOTOUCHレイヤーでのみコンボを有効にする
+    return layer_state_is(NIKOTOUCH);
+}
 
 // ============================================================
 // ニコタッチ変換テーブル
@@ -460,6 +496,67 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             tap_code(KC_BSPC);
             send_string(star_output[star_state]);
             
+            return false;
+
+        // 5+6 コンボ（濁点変換 = *キー相当）
+        case CMB_56:
+            if (!star_mode) {
+                // *入力待ちモードでない場合は無視
+                return false;
+            }
+
+            // 次の状態に進む（ループ）
+            star_state = (star_state + 1) % star_max_state;
+            
+            // 1文字削除して次の文字を送信
+            tap_code(KC_BSPC);
+            send_string(star_output[star_state]);
+            
+            return false;
+
+        // 4+5 コンボ（0キー相当）
+        case CMB_45:
+            {
+                // *入力待ちモード中に他のキーが押された場合
+                if (star_mode) {
+                    star_clear();
+                }
+
+                if (niko_buffer == 0xFF) {
+                    // 1回目のキー入力：0キーと同じ
+                    niko_buffer = 0;
+                    niko_buffer_time = timer_read();
+                    send_consonant(0);
+                    niko_consonant_displayed = true;
+                } else {
+                    // 2回目のキー入力：0キーと同じ
+                    if (niko_consonant_displayed) {
+                        tap_code(KC_BSPC);
+                    }
+                    
+                    const nikotouch_entry_t *entry = find_nikotouch_entry(niko_buffer, 0);
+
+                    if (entry != NULL && entry->output != NULL) {
+                        send_string(entry->output);
+
+                        if (entry->star1 != NULL) {
+                            star_mode = true;
+                            star_state = 0;
+                            star_output[0] = entry->output;
+                            star_output[1] = entry->star1;
+                            star_output[2] = entry->star2;
+                            
+                            if (entry->star2 != NULL) {
+                                star_max_state = 3;
+                            } else {
+                                star_max_state = 2;
+                            }
+                        }
+                    }
+
+                    niko_clear();
+                }
+            }
             return false;
 
         // ニコタッチ数字キー (NK_0 〜 NK_9)
