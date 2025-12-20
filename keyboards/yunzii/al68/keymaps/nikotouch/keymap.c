@@ -54,18 +54,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [NT_FN] = LAYOUT_65_ansi_blocker(
         KC_GRV,     KC_F1,      KC_F2,      KC_F3,      KC_F4,      KC_F5,      KC_F6,      KC_F7,      KC_F8,      KC_F9,      KC_F10,     KC_F11,     KC_F12,     RGB_TOG,    _______,
-        _______,    KC_USB,     KC_BLE1,    KC_BLE2,    KC_BLE3,    KC_24G,     _______,    _______,    _______,    _______,    _______,    _______,    _______,    RGB_MOD,    _______,
-        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                RGB_HUI,    _______, 
+        _______,    KC_USB,     KC_BLE1,    KC_BLE2,    KC_BLE3,    KC_24G,     _______,    _______,    _______,    _______,    _______,    _______,    _______,    RGB_MOD,    NK_M2,
+        _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                RGB_HUI,    NK_M1, 
         _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                RGB_VAI,    _______,
         _______,    _______,     _______,                           _______,                           _______,    _______,                            RGB_SPD,    RGB_VAD,    RGB_SPI 
     ),
 
     [NT_NIKOTOUCH] = LAYOUT_65_ansi_blocker(
-        KC_MUTE,    KC_COMM,    KC_DOT,     KC_LBRC,    KC_RBRC,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    NK_BS,      _______,
-        _______,    NK_1,       NK_2,       NK_3,       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,
-        _______,    NK_4,       NK_5,       NK_6,       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                KC_ENT,     _______,
-        _______,    NK_7,       NK_8,       NK_9,       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                _______,    _______,
-        _______,    NK_STAR,    NK_0,                               KC_SPC,                             _______,    NK_M1,                              _______,    MO(NT_NIKOSHIFT), _______
+        NK_M1,      XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    NK_1,       NK_2,       NK_3,       NK_BS,      NK_BS,      XXXXXXX,    _______,    _______,
+        XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    NK_4,       NK_5,       NK_6,       KC_ENT,     XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,
+        XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    NK_7,       NK_8,       NK_9,       KC_ENT,     XXXXXXX,                _______,    _______,
+        _______,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    XXXXXXX,    NK_STAR,    NK_0,       XXXXXXX,    KC_ENT,     XXXXXXX,    _______,                KC_UP,      _______,
+        XXXXXXX,    XXXXXXX,    XXXXXXX,                            KC_SPC,                             NK_M5,      XXXXXXX,                            KC_LEFT,    KC_DOWN,    KC_RIGHT
     ),
 
     [NT_NIKOSHIFT] = LAYOUT_65_ansi_blocker(
