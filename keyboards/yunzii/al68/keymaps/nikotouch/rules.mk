@@ -2,3 +2,4 @@
 USER_NAME := nikotouch
 
 ENCODER_MAP_ENABLE = yes
+VIA_ENABLE = yes

@@ -95,6 +95,16 @@ void matrix_scan_user(void) {
 }
 
 // ============================================================
+// VIA EEPROM初期化（初回のみ実行される）
+// ============================================================
+#ifdef VIA_ENABLE
+void eeconfig_init_user(void) {
+    // EEPROMをリセットして、keymaps[][]から再初期化
+    dynamic_keymap_reset();
+}
+#endif
+
+// ============================================================
 // キー処理
 // ============================================================
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
