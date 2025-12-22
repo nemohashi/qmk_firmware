@@ -33,6 +33,10 @@
     {"name": "NK_M4", "title": "モード4", "shortName": "M4"},
     {"name": "NK_M5", "title": "FN/濁点", "shortName": "M5"},
     {"name": "CMB_56", "title": "コンボ 5+6", "shortName": "C56"},
-    {"name": "CMB_45", "title": "コンボ 4+5", "shortName": "C45"}
+    {"name": "CMB_45", "title": "コンボ 4+5", "shortName": "C45"},
+    {"name": "CMB_79", "title": "コンボ 7+9 再入力", "shortName": "C79"},
+    {"name": "CMB_1BS", "title": "コンボ 1+BS 2文字削除", "shortName": "C1BS"},
+    {"name": "CMB_2BS", "title": "コンボ 2+BS 3文字削除", "shortName": "C2BS"},
+    {"name": "CMB_3BS", "title": "コンボ 3+BS 4文字削除", "shortName": "C3BS"}
   ]
 }

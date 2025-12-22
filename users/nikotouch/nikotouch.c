@@ -146,6 +146,27 @@ static uint16_t m5_timer = 0;                // M5押下時刻
 bool m5_is_hold = false;                     // M5がホールドとして扱われたか（外部参照用）
 
 // ============================================================
+// 確定前バッファ管理
+// ============================================================
+// バッファエントリ: 各キー入力を記録
+// key_num: 0-9 = NK_0-NK_9, 10 = NK_STAR
+#define PRECONFIRM_KEY_STAR 10
+typedef struct {
+    uint8_t key_num;  // 入力キー (0-9, 10=*)
+} preconfirm_entry_t;
+
+static preconfirm_entry_t preconfirm_buffer[PRECONFIRM_BUFFER_SIZE];
+static uint8_t preconfirm_write_ptr = 0;    // 書き込み位置
+static uint8_t preconfirm_cursor = 0;       // 現在のカーソル位置（Backspaceで戻った位置）
+static bool preconfirm_space_flag = false;  // Spaceが押されたかどうか
+
+// ============================================================
+// 前方宣言
+// ============================================================
+static const nikotouch_entry_t* find_nikotouch_entry(uint8_t key1, uint8_t key2);
+static void send_consonant(uint8_t niko_num);
+
+// ============================================================
 // 状態クリア関数
 // ============================================================
 
@@ -162,6 +183,154 @@ void star_clear(void) {
     star_output[1] = NULL;
     star_output[2] = NULL;
     star_max_state = 0;
+}
+
+// 確定前バッファをクリア
+void preconfirm_clear(void) {
+    preconfirm_write_ptr = 0;
+    preconfirm_cursor = 0;
+    preconfirm_space_flag = false;
+}
+
+// 確定前バッファにキーを追加
+static void preconfirm_add_key(uint8_t key_num) {
+    // カーソルが書き込み位置より前にある場合、カーソル位置から書き込み
+    if (preconfirm_cursor < preconfirm_write_ptr) {
+        preconfirm_write_ptr = preconfirm_cursor;
+    }
+    
+    // バッファが満杯の場合、古いエントリを捨てて詰める
+    if (preconfirm_write_ptr >= PRECONFIRM_BUFFER_SIZE) {
+        // 2キー分（1文字分）ずらす
+        for (uint8_t i = 0; i < PRECONFIRM_BUFFER_SIZE - 2; i++) {
+            preconfirm_buffer[i] = preconfirm_buffer[i + 2];
+        }
+        preconfirm_write_ptr = PRECONFIRM_BUFFER_SIZE - 2;
+    }
+    
+    preconfirm_buffer[preconfirm_write_ptr].key_num = key_num;
+    preconfirm_write_ptr++;
+    preconfirm_cursor = preconfirm_write_ptr;
+}
+
+// 確定前バッファのカーソルを戻す（1文字分=2キー入力分、濁音は3キー分）
+static void preconfirm_backtrack(uint8_t char_count) {
+    for (uint8_t i = 0; i < char_count; i++) {
+        if (preconfirm_cursor == 0) break;
+        
+        // 直前のキーが*かどうかチェック
+        if (preconfirm_cursor >= 1 && 
+            preconfirm_buffer[preconfirm_cursor - 1].key_num == PRECONFIRM_KEY_STAR) {
+            // 濁音：3キー分戻る（数字、数字、*）
+            if (preconfirm_cursor >= 3) {
+                preconfirm_cursor -= 3;
+            } else {
+                preconfirm_cursor = 0;
+            }
+        } else {
+            // 通常の文字：2キー分戻る
+            if (preconfirm_cursor >= 2) {
+                preconfirm_cursor -= 2;
+            } else {
+                preconfirm_cursor = 0;
+            }
+        }
+    }
+}
+
+// カーソル位置から直前の2キーを取得（濁音変換用）
+// 成功時はtrueを返し、key1, key2に値を設定
+static bool preconfirm_get_last_pair(uint8_t *key1, uint8_t *key2) {
+    // カーソル位置から2キー戻った場所を見る
+    if (preconfirm_cursor < 2) {
+        return false;
+    }
+    
+    uint8_t idx = preconfirm_cursor - 2;
+    
+    // *キーが含まれている場合は対象外
+    if (preconfirm_buffer[idx].key_num == PRECONFIRM_KEY_STAR ||
+        preconfirm_buffer[idx + 1].key_num == PRECONFIRM_KEY_STAR) {
+        return false;
+    }
+    
+    *key1 = preconfirm_buffer[idx].key_num;
+    *key2 = preconfirm_buffer[idx + 1].key_num;
+    return true;
+}
+
+// カーソル位置から*を挿入（濁音変換成功時）
+static void preconfirm_insert_star_at_cursor(void) {
+    // カーソル位置に*を追加
+    if (preconfirm_cursor >= PRECONFIRM_BUFFER_SIZE) {
+        return;
+    }
+    
+    // カーソル以降のデータを1つ後ろにずらす
+    if (preconfirm_write_ptr < PRECONFIRM_BUFFER_SIZE) {
+        for (int i = preconfirm_write_ptr; i > preconfirm_cursor; i--) {
+            preconfirm_buffer[i] = preconfirm_buffer[i - 1];
+        }
+        preconfirm_buffer[preconfirm_cursor].key_num = PRECONFIRM_KEY_STAR;
+        preconfirm_cursor++;
+        preconfirm_write_ptr++;
+    }
+}
+
+// カーソル位置から残りのシーケンスを再生（7+9コンボ用）
+static void preconfirm_replay_remaining(void) {
+    while (preconfirm_cursor < preconfirm_write_ptr) {
+        uint8_t key_num = preconfirm_buffer[preconfirm_cursor].key_num;
+        
+        if (key_num == PRECONFIRM_KEY_STAR) {
+            // *キーの処理：直前の文字に対して濁音変換
+            if (star_mode) {
+                // *入力待ちモード中：変換を実行
+                uint8_t next_state = (star_state + 1) % star_max_state;
+                // 1文字削除して次の文字を送信
+                tap_code(KC_BSPC);
+                send_string(star_output[next_state]);
+                star_state = next_state;
+            }
+            preconfirm_cursor++;
+        } else if (key_num <= 9) {
+            // 数字キーの処理
+            if (niko_buffer == 0xFF) {
+                // 1回目のキー
+                niko_buffer = key_num;
+                send_consonant(key_num);
+                niko_consonant_displayed = true;
+                preconfirm_cursor++;
+            } else {
+                // 2回目のキー：変換実行
+                if (niko_consonant_displayed) {
+                    tap_code(KC_BSPC);
+                }
+                
+                const nikotouch_entry_t *entry = find_nikotouch_entry(niko_buffer, key_num);
+                if (entry != NULL && entry->output != NULL) {
+                    send_string(entry->output);
+                    
+                    // *入力待ちモードの設定
+                    if (entry->star1 != NULL) {
+                        star_mode = true;
+                        star_state = 0;
+                        star_output[0] = entry->output;
+                        star_output[1] = entry->star1;
+                        star_output[2] = entry->star2;
+                        star_max_state = (entry->star2 != NULL) ? 3 : 2;
+                    } else {
+                        star_clear();
+                    }
+                }
+                niko_clear();
+                preconfirm_cursor++;
+            }
+        } else {
+            // 不明なキー
+            preconfirm_cursor++;
+        }
+    }
 }
 
 // ============================================================
@@ -356,6 +525,7 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
         case NK_M1:
             layer_move(NT_BASE);
             tap_code(KC_LNG2);  // 英数キー
+            preconfirm_clear();  // レイヤー切替時は確定前バッファをクリア
             return false;
 
         // M2: NIKOTOUCHレイヤー + かな（日本語ON）
@@ -364,6 +534,7 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             tap_code(KC_LNG1);  // かなキー
             niko_clear();
             star_clear();
+            preconfirm_clear();  // レイヤー切替時は確定前バッファをクリア
             return false;
 
         // M3: 未割り当て
@@ -383,32 +554,100 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                 // *バッファがある場合はクリア + Backspace送信（1回のみ）
                 star_clear();
                 tap_code(KC_BSPC);
+                // 確定前バッファのカーソルを1文字戻す
+                preconfirm_backtrack(1);
                 return false;
             } else {
                 // 通常のBackspace（キーリピート対応）
                 register_code(KC_BSPC);
+                // 確定前バッファのカーソルを1文字戻す
+                preconfirm_backtrack(1);
                 return false;
             }
 
         // * キー（濁音・半濁音変換）
         case NK_STAR:
-            process_star_action();
+            if (star_mode) {
+                // 通常の*入力待ちモード
+                process_star_action();
+                // 確定前バッファに*を記録
+                preconfirm_add_key(PRECONFIRM_KEY_STAR);
+            } else {
+                // *入力待ちモードでない場合、確定前バッファから濁音変換を試みる
+                uint8_t key1, key2;
+                if (preconfirm_get_last_pair(&key1, &key2)) {
+                    // 確定前バッファから直前のキーペアを取得
+                    const nikotouch_entry_t *entry = find_nikotouch_entry(key1, key2);
+                    if (entry != NULL && entry->star1 != NULL) {
+                        // 濁音変換可能：1文字削除して変換後の文字を送信
+                        tap_code(KC_BSPC);
+                        send_string(entry->star1);
+                        // 確定前バッファに*を挿入
+                        preconfirm_insert_star_at_cursor();
+                    }
+                }
+            }
             return false;
 
         // 5+6 コンボ（濁点変換 = *キー相当）
         case CMB_56:
-            process_star_action();
+            if (star_mode) {
+                process_star_action();
+                preconfirm_add_key(PRECONFIRM_KEY_STAR);
+            } else {
+                uint8_t key1, key2;
+                if (preconfirm_get_last_pair(&key1, &key2)) {
+                    const nikotouch_entry_t *entry = find_nikotouch_entry(key1, key2);
+                    if (entry != NULL && entry->star1 != NULL) {
+                        tap_code(KC_BSPC);
+                        send_string(entry->star1);
+                        preconfirm_insert_star_at_cursor();
+                    }
+                }
+            }
             return false;
 
         // 4+5 コンボ（0キー相当）
         case CMB_45:
             process_zero_key();
+            // 確定前バッファに0を記録
+            preconfirm_add_key(0);
+            return false;
+
+        // 7+9 コンボ（確定前バッファから残りを再入力）
+        case CMB_79:
+            niko_clear();  // 再生前に状態をリセット
+            star_clear();
+            preconfirm_replay_remaining();
+            return false;
+
+        // 1+BS コンボ（2文字削除）
+        case CMB_1BS:
+            for (uint8_t i = 0; i < 2; i++) tap_code(KC_BSPC);
+            preconfirm_backtrack(2);
+            return false;
+
+        // 2+BS コンボ（3文字削除）
+        case CMB_2BS:
+            for (uint8_t i = 0; i < 3; i++) tap_code(KC_BSPC);
+            preconfirm_backtrack(3);
+            return false;
+
+        // 3+BS コンボ（4文字削除）
+        case CMB_3BS:
+            for (uint8_t i = 0; i < 4; i++) tap_code(KC_BSPC);
+            preconfirm_backtrack(4);
             return false;
 
         // ニコタッチ数字キー (NK_0 〜 NK_9)
         default:
             if (is_nikotouch_key(keycode)) {
                 uint8_t num = keycode_to_niko_num(keycode);
+
+                // Spaceフラグが立っている状態で数字キーが押されたらバッファをクリア
+                if (preconfirm_space_flag) {
+                    preconfirm_clear();
+                }
 
                 // *入力待ちモード中に*以外が押された場合
                 if (star_mode) {
@@ -421,6 +660,8 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                     niko_buffer_time = timer_read();
                     send_consonant(num);
                     niko_consonant_displayed = true;
+                    // 確定前バッファに記録
+                    preconfirm_add_key(num);
                 } else {
                     // 2回目のキー入力：子音文字を削除してから変換後の文字列を送信
                     if (niko_consonant_displayed) {
@@ -451,11 +692,23 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                     }
                     // 該当なしの場合は何も送信しない
 
+                    // 確定前バッファに記録
+                    preconfirm_add_key(num);
                     niko_clear();
                 }
                 return false;
             }
             break;
+    }
+
+    // Enter キー：確定前バッファをクリア
+    if (keycode == KC_ENT || keycode == KC_PENT) {
+        preconfirm_clear();
+    }
+
+    // Space キー：Spaceフラグを立てる（次の数字キーでクリア）
+    if (keycode == KC_SPC) {
+        preconfirm_space_flag = true;
     }
 
     // *入力待ちモード中に他のキーが押された場合（M5とNK_STARは除外）

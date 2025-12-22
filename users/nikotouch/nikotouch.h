@@ -28,6 +28,12 @@
 #define TAPPING_TERM_M5 200  // M5タップ/ホールド判定時間（ミリ秒）
 #endif
 
+// 確定前バッファ設定
+#ifndef PRECONFIRM_BUFFER_MAX_CHARS
+#define PRECONFIRM_BUFFER_MAX_CHARS 20  // 確定前バッファ最大文字数
+#endif
+#define PRECONFIRM_BUFFER_SIZE (PRECONFIRM_BUFFER_MAX_CHARS * 2)  // キー入力数（1文字=2キー）
+
 // ============================================================
 // カスタムキーコード
 // ============================================================
@@ -51,6 +57,10 @@ enum nikotouch_keycodes {
     NK_M5,       // M5: LT(FN, NK_STAR)
     CMB_56,      // 5+6 コンボ（濁点変換）
     CMB_45,      // 4+5 コンボ（0キー相当）
+    CMB_79,      // 7+9 コンボ（確定前バッファから残りを再入力）
+    CMB_1BS,     // 1+BS コンボ（2文字削除）
+    CMB_2BS,     // 2+BS コンボ（3文字削除）
+    CMB_3BS,     // 3+BS コンボ（4文字削除）
     NIKOTOUCH_SAFE_RANGE,  // キーマップ側で追加のキーコードを定義する場合に使用
 };
 
@@ -87,6 +97,7 @@ void matrix_scan_nikotouch(void);
 // 状態クリア関数（キーマップからも呼び出し可能）
 void niko_clear(void);
 void star_clear(void);
+void preconfirm_clear(void);  // 確定前バッファクリア
 
 // ============================================================
 // 外部参照変数（M5のホールド状態確認用）
