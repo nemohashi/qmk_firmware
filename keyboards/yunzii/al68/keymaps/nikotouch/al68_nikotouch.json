@@ -27,6 +27,7 @@
     {"name": "NK_0", "title": "56式 0キー", "shortName": "NK0"},
     {"name": "NK_STAR", "title": "56式 *キー", "shortName": "NK*"},
     {"name": "NK_BS", "title": "56式 BS", "shortName": "NKBS"},
+    {"name": "NK_SENT", "title": "Shift+Enter", "shortName": "S+Ent"},
     {"name": "NK_M1", "title": "BASEレイヤー", "shortName": "M1"},
     {"name": "NK_M2", "title": "NIKOTOUCHレイヤー", "shortName": "M2"},
     {"name": "NK_M3", "title": "モード3", "shortName": "M3"},

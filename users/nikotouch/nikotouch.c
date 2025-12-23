@@ -565,6 +565,13 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                 return false;
             }
 
+        // Shift + Enter（改行）
+        case NK_SENT:
+            register_code(KC_LSFT);
+            tap_code(KC_ENT);
+            unregister_code(KC_LSFT);
+            return false;
+
         // * キー（濁音・半濁音変換）
         case NK_STAR:
             if (star_mode) {

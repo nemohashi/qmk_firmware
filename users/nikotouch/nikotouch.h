@@ -50,6 +50,7 @@ enum nikotouch_keycodes {
     NK_0,
     NK_STAR,     // * キー（濁音・半濁音変換）
     NK_BS,       // Backspace（バッファクリア機能付き）
+    NK_SENT,     // Shift + Enter（改行）
     NK_M1,       // M1: BASEレイヤー切替 + 英数
     NK_M2,       // M2: NIKOTOUCHレイヤー切替 + かな
     NK_M3,       // M3: 未割り当て
