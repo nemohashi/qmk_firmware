@@ -16,7 +16,7 @@
 // ============================================================
 enum combos {
     COMBO_56_STAR,     // 5+6 = 濁点（*キー相当）
-    COMBO_45_ZERO,     // 4+5 = 0キー相当
+    COMBO_67_ZERO,     // 6+7 = 0キー相当
     COMBO_79_REPLAY,   // 7+9 = 確定前バッファから再入力
     COMBO_1BS,         // 1+BS = 2文字削除
     COMBO_2BS,         // 2+BS = 3文字削除
@@ -26,7 +26,7 @@ enum combos {
 
 // コンボキー定義（NIKOTOUCHレイヤーのキーを使用）
 const uint16_t PROGMEM combo_56[] = {NK_5, NK_6, COMBO_END};
-const uint16_t PROGMEM combo_45[] = {NK_4, NK_5, COMBO_END};
+const uint16_t PROGMEM combo_67[] = {NK_6, NK_7, COMBO_END};
 const uint16_t PROGMEM combo_79[] = {NK_7, NK_9, COMBO_END};
 const uint16_t PROGMEM combo_1bs[] = {NK_1, NK_BS, COMBO_END};
 const uint16_t PROGMEM combo_2bs[] = {NK_2, NK_BS, COMBO_END};
@@ -34,7 +34,7 @@ const uint16_t PROGMEM combo_3bs[] = {NK_3, NK_BS, COMBO_END};
 
 combo_t key_combos[COMBO_COUNT] = {
     [COMBO_56_STAR]   = COMBO(combo_56, CMB_56),
-    [COMBO_45_ZERO]   = COMBO(combo_45, CMB_45),
+    [COMBO_67_ZERO]   = COMBO(combo_67, CMB_67),
     [COMBO_79_REPLAY] = COMBO(combo_79, CMB_79),
     [COMBO_1BS]       = COMBO(combo_1bs, CMB_1BS),
     [COMBO_2BS]       = COMBO(combo_2bs, CMB_2BS),

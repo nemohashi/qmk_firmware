@@ -145,6 +145,11 @@ static bool m5_pressed = false;              // M5が押されているか
 static uint16_t m5_timer = 0;                // M5押下時刻
 bool m5_is_hold = false;                     // M5がホールドとして扱われたか（外部参照用）
 
+// 長押し入力用（1-5キー）
+static uint8_t hold_key = 0xFF;              // 長押し中のキー (0xFF = なし)
+static uint16_t hold_timer = 0;              // 長押し開始時刻
+static bool hold_triggered = false;          // 長押しが発動したか
+
 // ============================================================
 // 確定前バッファ管理
 // ============================================================
@@ -465,6 +470,39 @@ void matrix_scan_nikotouch(void) {
         }
     }
 
+    // 1-5キーの長押し判定
+    if (hold_key != 0xFF && !hold_triggered) {
+        if (timer_elapsed(hold_timer) > NIKOTOUCH_HOLD_TERM) {
+            // 長押し発動：対応する文字を出力
+            hold_triggered = true;
+            
+            // *入力待ちモードをクリア
+            if (star_mode) {
+                star_clear();
+            }
+            
+            // 長押し文字を出力（11, 22, 33, 44, 55相当）
+            const nikotouch_entry_t *entry = find_nikotouch_entry(hold_key, hold_key);
+            if (entry != NULL && entry->output != NULL) {
+                send_string(entry->output);
+                
+                // 確定前バッファに記録（1キー目と2キー目）
+                preconfirm_add_key(hold_key);
+                preconfirm_add_key(hold_key);
+                
+                // *入力待ちモードの設定
+                if (entry->star1 != NULL) {
+                    star_mode = true;
+                    star_state = 0;
+                    star_output[0] = entry->output;
+                    star_output[1] = entry->star1;
+                    star_output[2] = entry->star2;
+                    star_max_state = (entry->star2 != NULL) ? 3 : 2;
+                }
+            }
+        }
+    }
+
     // M5のホールド判定
     if (m5_pressed && !m5_is_hold) {
         if (timer_elapsed(m5_timer) > TAPPING_TERM_M5) {
@@ -516,6 +554,38 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             unregister_code(KC_BSPC);
             return false;
         }
+        
+        // 1-5キーのリリース処理（長押し対応）
+        if (keycode >= NK_1 && keycode <= NK_5) {
+            uint8_t num = keycode_to_niko_num(keycode);
+            if (hold_key == num) {
+                if (!hold_triggered) {
+                    // 長押し未発動：従来の1キー目処理を実行
+                    // *入力待ちモード中に*以外が押された場合
+                    if (star_mode) {
+                        star_clear();
+                    }
+                    
+                    // Spaceフラグが立っている状態で数字キーが押されたらバッファをクリア
+                    if (preconfirm_space_flag) {
+                        preconfirm_clear();
+                    }
+                    
+                    // 1回目のキー入力：子音文字を表示
+                    niko_buffer = num;
+                    niko_buffer_time = timer_read();
+                    send_consonant(num);
+                    niko_consonant_displayed = true;
+                    // 確定前バッファに記録
+                    preconfirm_add_key(num);
+                }
+                // 長押し状態をクリア
+                hold_key = 0xFF;
+                hold_triggered = false;
+            }
+            return false;
+        }
+        
         return true;
     }
 
@@ -614,8 +684,8 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 
-        // 4+5 コンボ（0キー相当）
-        case CMB_45:
+        // 6+7 コンボ（0キー相当）
+        case CMB_67:
             process_zero_key();
             // 確定前バッファに0を記録
             preconfirm_add_key(0);
@@ -662,13 +732,21 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                 }
 
                 if (niko_buffer == 0xFF) {
-                    // 1回目のキー入力：子音文字を表示
-                    niko_buffer = num;
-                    niko_buffer_time = timer_read();
-                    send_consonant(num);
-                    niko_consonant_displayed = true;
-                    // 確定前バッファに記録
-                    preconfirm_add_key(num);
+                    // 1回目のキー入力
+                    if (num >= 1 && num <= 5) {
+                        // 1-5キー：長押しタイマー開始（子音表示しない）
+                        hold_key = num;
+                        hold_timer = timer_read();
+                        hold_triggered = false;
+                    } else {
+                        // 0, 6-9キー：従来通り子音文字を表示
+                        niko_buffer = num;
+                        niko_buffer_time = timer_read();
+                        send_consonant(num);
+                        niko_consonant_displayed = true;
+                        // 確定前バッファに記録
+                        preconfirm_add_key(num);
+                    }
                 } else {
                     // 2回目のキー入力：子音文字を削除してから変換後の文字列を送信
                     if (niko_consonant_displayed) {

@@ -28,6 +28,10 @@
 #define TAPPING_TERM_M5 200  // M5タップ/ホールド判定時間（ミリ秒）
 #endif
 
+#ifndef NIKOTOUCH_HOLD_TERM
+#define NIKOTOUCH_HOLD_TERM 160  // 長押し判定時間（ミリ秒）
+#endif
+
 // 確定前バッファ設定
 #ifndef PRECONFIRM_BUFFER_MAX_CHARS
 #define PRECONFIRM_BUFFER_MAX_CHARS 20  // 確定前バッファ最大文字数
@@ -57,7 +61,7 @@ enum nikotouch_keycodes {
     NK_M4,       // M4: MO(FN)
     NK_M5,       // M5: LT(FN, NK_STAR)
     CMB_56,      // 5+6 コンボ（濁点変換）
-    CMB_45,      // 4+5 コンボ（0キー相当）
+    CMB_67,      // 6+7 コンボ（0キー相当）
     CMB_79,      // 7+9 コンボ（確定前バッファから残りを再入力）
     CMB_1BS,     // 1+BS コンボ（2文字削除）
     CMB_2BS,     // 2+BS コンボ（3文字削除）
