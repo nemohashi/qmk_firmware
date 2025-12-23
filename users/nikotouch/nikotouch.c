@@ -731,6 +731,34 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
                     star_clear();
                 }
 
+                // ロールオーバー対応: 1-5キーが押されている間に別のキーが押された場合
+                if (hold_key != 0xFF && !hold_triggered) {
+                    // hold_keyを1キー目、numを2キー目として変換
+                    const nikotouch_entry_t *entry = find_nikotouch_entry(hold_key, num);
+                    if (entry != NULL && entry->output != NULL) {
+                        send_string(entry->output);
+                        
+                        // 確定前バッファに記録（1キー目と2キー目）
+                        preconfirm_add_key(hold_key);
+                        preconfirm_add_key(num);
+                        
+                        // *入力待ちモードの設定
+                        if (entry->star1 != NULL) {
+                            star_mode = true;
+                            star_state = 0;
+                            star_output[0] = entry->output;
+                            star_output[1] = entry->star1;
+                            star_output[2] = entry->star2;
+                            star_max_state = (entry->star2 != NULL) ? 3 : 2;
+                        }
+                    }
+                    // hold_keyをクリア
+                    hold_key = 0xFF;
+                    hold_triggered = false;
+                    niko_clear();
+                    return false;
+                }
+
                 if (niko_buffer == 0xFF) {
                     // 1回目のキー入力
                     if (num >= 1 && num <= 5) {
