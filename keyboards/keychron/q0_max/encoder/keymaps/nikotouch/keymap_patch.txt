@@ -1,0 +1,44 @@
+    [NT_NIKOSHIFT] = LAYOUT_tenkey_27(
+        _______, _______, _______, _______, _______,
+        _______, _______, _______, _______, _______,
+        _______, KC_LEFT, KC_DOWN, KC_UP,   KC_RIGHT,
+        _______, KC_LEFT, KC_DOWN, KC_UP,
+        _______, _______, _______, _______, NK_SENT,
+        _______, _______,          _______          ),
+
+    // Artseyレイヤー - ALPHA (基本英字入力)
+    [NT_ARTSEY_ALPHA] = LAYOUT_tenkey_27(
+        KC_MUTE,    KC_ESC,  KC_DEL,  AR_MINUS, KC_BSPC,
+        NK_M1,      AR_1,    AR_2,    AR_3,     KC_BSPC,
+        NK_M2,      AR_4,    AR_5,    AR_6,     AR_ENT,
+        NK_M3,      KC_P7,   KC_P8,   KC_P9,
+        NK_M4,      KC_P1,   KC_P2,   KC_P3,    KC_PENT,
+        NK_M5,      KC_P0,           AR_DOT            ),
+
+    // Artseyレイヤー - KAKO (括弧・記号)
+    [NT_ARTSEY_KAKO] = LAYOUT_tenkey_27(
+        KC_MUTE,    KC_ESC,  KC_DEL,  AR_K_MINUS, KC_BSPC,
+        NK_M1,      AR_K_1,  AR_K_2,  AR_K_3,   KC_BSPC,
+        NK_M2,      AR_K_4,  AR_K_5,  AR_K_6,   AR_K_ENT,
+        NK_M3,      KC_P7,   KC_P8,   KC_P9,
+        NK_M4,      KC_P1,   KC_P2,   KC_P3,    KC_PENT,
+        NK_M5,      KC_P0,           AR_K_DOT          ),
+
+    // Artseyレイヤー - SYMBOL (記号・数字)
+    [NT_ARTSEY_SYMBOL] = LAYOUT_tenkey_27(
+        KC_MUTE,    KC_ESC,  KC_DEL,  AR_S_MINUS, KC_BSPC,
+        NK_M1,      AR_S_1,  AR_S_2,  AR_S_3,   KC_BSPC,
+        NK_M2,      AR_S_4,  AR_S_5,  AR_S_6,   AR_S_ENT,
+        NK_M3,      KC_P7,   KC_P8,   KC_P9,
+        NK_M4,      KC_P1,   KC_P2,   KC_P3,    KC_PENT,
+        NK_M5,      KC_P0,           AR_S_DOT          ),
+
+    // 予約レイヤー
+    [NT_LAYER_RESERVED] = LAYOUT_tenkey_27(
+        _______, _______, _______, _______, _______,
+        _______, _______, _______, _______, _______,
+        _______, _______, _______, _______, _______,
+        _______, _______, _______, _______,
+        _______, _______, _______, _______, _______,
+        _______, _______,          _______          )
+};

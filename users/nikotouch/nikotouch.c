@@ -607,8 +607,12 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             preconfirm_clear();  // レイヤー切替時は確定前バッファをクリア
             return false;
 
-        // M3: 未割り当て
+        // M3: ARTSEY_ALPHAレイヤーに切り替え
         case NK_M3:
+            layer_move(NT_ARTSEY_ALPHA);
+            niko_clear();
+            star_clear();
+            preconfirm_clear();
             return false;
 
         // Backspace（ニコタッチバッファクリア機能付き）

@@ -77,7 +77,12 @@ enum nikotouch_layers {
     NT_FN,
     NT_NIKOTOUCH,
     NT_NIKOSHIFT,
-    NT_LAYER_COUNT,
+    NT_ARTSEY_ALPHA,
+    NT_ARTSEY_KAKO,
+    NT_ARTSEY_SYMBOL1,
+    NT_ARTSEY_SYMBOL2,
+    NT_ARTSEY_SYMBOL3,
+    NT_LAYER_COUNT,  // = 9
 };
 
 // ============================================================

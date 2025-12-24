@@ -1,0 +1,9 @@
+/* Copyright 2024 nemohashi
+ *
+ * nikotouch キーマップ設定
+ */
+
+#pragma once
+
+// 9レイヤーに対応（BASE, FN, NIKOTOUCH, NIKOSHIFT, ARTSEY_ALPHA, ARTSEY_KAKO, ARTSEY_SYMBOL1, ARTSEY_SYMBOL2, ARTSEY_SYMBOL3）
+#define DYNAMIC_KEYMAP_LAYER_COUNT 9
