@@ -25,6 +25,17 @@ enum combos {
     COMBO_2BS,      // 2+BS = 3文字削除
     COMBO_3BS,      // 3+BS = 4文字削除
     
+    // レイヤー切り替えコンボ（NIKOTOUCH用）
+    COMBO_NK_LAYER_TOGGLE,  // Space+Ent = NIKOTOUCH ⇔ ARTSEY
+    COMBO_NK_LAYER_BASE,    // Space+Ent2 = BASE ⇔ 前レイヤー
+    
+    // レイヤー切り替えコンボ（ARTSEY用）
+    COMBO_AR_LAYER_TOGGLE,  // Space+Ent = NIKOTOUCH ⇔ ARTSEY
+    COMBO_AR_LAYER_BASE,    // Space+Ent2 = BASE ⇔ 前レイヤー
+    
+    // レイヤー切り替えコンボ（BASE用）
+    COMBO_BASE_LAYER_BACK,  // P0+PENT = BASE → 前レイヤー
+    
     // Artseyコンボ（ARTSEY_ALPHAレイヤー）2キー
     COMBO_AR_12,    // 1+2 = f
     COMBO_AR_23,    // 2+3 = g
@@ -58,19 +69,6 @@ enum combos {
     COMBO_AR_456E,  // 4+5+6+Ent = Space
     COMBO_AR_123M,  // 1+2+3+- = z
     
-    // Artseyコンボ（ARTSEY_KAKOレイヤー）
-    COMBO_AR_K23,   // 2+3 = <
-    COMBO_AR_K3M,   // 3+- = ~
-    COMBO_AR_K56,   // 5+6 = >
-    COMBO_AR_K6E,   // 6+Ent = |
-    
-    // Artseyコンボ（ARTSEY_SYMBOLレイヤー）
-    COMBO_AR_S12,   // 1+2 = $
-    COMBO_AR_S23,   // 2+3 = ^
-    COMBO_AR_S3M,   // 3+- = _
-    COMBO_AR_S56,   // 5+6 = *
-    COMBO_AR_S6E,   // 6+Ent = +
-    
     COMBO_COUNT
 };
 
@@ -81,6 +79,17 @@ const uint16_t PROGMEM combo_79[] = {NK_7, NK_9, COMBO_END};
 const uint16_t PROGMEM combo_1bs[] = {NK_1, NK_BS, COMBO_END};
 const uint16_t PROGMEM combo_2bs[] = {NK_2, NK_BS, COMBO_END};
 const uint16_t PROGMEM combo_3bs[] = {NK_3, NK_BS, COMBO_END};
+
+// レイヤー切り替えコンボキー定義（NIKOTOUCH用: KC_SPC + NK_ENT/NK_ENT2）
+const uint16_t PROGMEM combo_nk_layer_toggle[] = {KC_SPC, NK_ENT, COMBO_END};
+const uint16_t PROGMEM combo_nk_layer_base[] = {KC_SPC, NK_ENT2, COMBO_END};
+
+// レイヤー切り替えコンボキー定義（ARTSEY用: AR_SPC + AR_ENT/AR_ENT2）
+const uint16_t PROGMEM combo_ar_layer_toggle[] = {AR_SPC, AR_ENT, COMBO_END};
+const uint16_t PROGMEM combo_ar_layer_base[] = {AR_SPC, AR_ENT2, COMBO_END};
+
+// レイヤー切り替えコンボキー定義（BASE用: KC_P0 + KC_PENT）
+const uint16_t PROGMEM combo_base_layer_back[] = {KC_P0, KC_PENT, COMBO_END};
 
 // Artseyコンボキー定義（ARTSEY_ALPHAレイヤー）
 const uint16_t PROGMEM combo_ar_12[] = {AR_1, AR_2, COMBO_END};
@@ -124,6 +133,17 @@ combo_t key_combos[COMBO_COUNT] = {
     [COMBO_2BS] = COMBO(combo_2bs, CMB_2BS),
     [COMBO_3BS] = COMBO(combo_3bs, CMB_3BS),
     
+    // レイヤー切り替えコンボ（NIKOTOUCH用）
+    [COMBO_NK_LAYER_TOGGLE] = COMBO(combo_nk_layer_toggle, CMB_LAYER_TOGGLE),
+    [COMBO_NK_LAYER_BASE] = COMBO(combo_nk_layer_base, CMB_LAYER_BASE),
+    
+    // レイヤー切り替えコンボ（ARTSEY用）
+    [COMBO_AR_LAYER_TOGGLE] = COMBO(combo_ar_layer_toggle, CMB_LAYER_TOGGLE),
+    [COMBO_AR_LAYER_BASE] = COMBO(combo_ar_layer_base, CMB_LAYER_BASE),
+    
+    // レイヤー切り替えコンボ（BASE用）
+    [COMBO_BASE_LAYER_BACK] = COMBO(combo_base_layer_back, CMB_LAYER_BASE),
+    
     // Artseyコンボ（ARTSEY_ALPHAレイヤー）2キー
     [COMBO_AR_12] = COMBO(combo_ar_12, CMB_AR_12),
     [COMBO_AR_23] = COMBO(combo_ar_23, CMB_AR_23),
@@ -166,8 +186,27 @@ uint16_t get_combo_term(uint16_t index, combo_t *combo) {
 // コンボのレイヤー別有効化
 bool combo_should_trigger(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record) {
     // NIKOTOUCHコンボ（COMBO_56_STAR～COMBO_3BS）
-    if (combo_index <= COMBO_3BS) {
+    if (combo_index >= COMBO_56_STAR && combo_index <= COMBO_3BS) {
         return layer_state_is(NT_NIKOTOUCH);
+    }
+    
+    // NIKOTOUCHレイヤー切り替えコンボ
+    if (combo_index == COMBO_NK_LAYER_TOGGLE || combo_index == COMBO_NK_LAYER_BASE) {
+        return layer_state_is(NT_NIKOTOUCH) || layer_state_is(NT_NIKOSHIFT);
+    }
+    
+    // ARTSEYレイヤー切り替えコンボ
+    if (combo_index == COMBO_AR_LAYER_TOGGLE || combo_index == COMBO_AR_LAYER_BASE) {
+        return layer_state_is(NT_ARTSEY_ALPHA) || 
+               layer_state_is(NT_ARTSEY_KAKO) || 
+               layer_state_is(NT_ARTSEY_SYMBOL1) || 
+               layer_state_is(NT_ARTSEY_SYMBOL2) || 
+               layer_state_is(NT_ARTSEY_SYMBOL3);
+    }
+    
+    // BASEレイヤー切り替えコンボ
+    if (combo_index == COMBO_BASE_LAYER_BACK) {
+        return layer_state_is(NT_BASE) || layer_state_is(NT_FN);
     }
     
     // Artseyコンボ（COMBO_AR_12～COMBO_AR_123M）
@@ -203,9 +242,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [NT_NIKOTOUCH] = LAYOUT_tenkey_27(
         KC_MUTE,    KC_COMM, KC_DOT,  KC_LBRC, KC_RBRC,
         NK_M1,      NK_1,    NK_2,    NK_3,    NK_BS,
-        NK_M2,      NK_4,    NK_5,    NK_6,    KC_ENT,
+        NK_M2,      NK_4,    NK_5,    NK_6,    NK_ENT,
         NK_M3,      NK_7,    NK_8,    NK_9,
-        NK_M4,      NK_STAR, NK_0,    KC_HASH, KC_ENT,
+        NK_M4,      NK_STAR, NK_0,    KC_HASH, NK_ENT2,
         NK_M5,      KC_SPC,       MO(NT_NIKOSHIFT)  ),
 
     [NT_NIKOSHIFT] = LAYOUT_tenkey_27(

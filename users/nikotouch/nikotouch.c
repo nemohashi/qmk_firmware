@@ -150,6 +150,9 @@ static uint8_t hold_key = 0xFF;              // 長押し中のキー (0xFF = �
 static uint16_t hold_timer = 0;              // 長押し開始時刻
 static bool hold_triggered = false;          // 長押しが発動したか
 
+// レイヤー切り替え用
+static uint8_t previous_layer = NT_NIKOTOUCH;  // BASEに移動する前のレイヤー（初期値: NIKOTOUCH）
+
 // ============================================================
 // 確定前バッファ管理
 // ============================================================
@@ -596,6 +599,11 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             layer_move(NT_BASE);
             tap_code(KC_LNG2);  // 英数キー
             preconfirm_clear();  // レイヤー切替時は確定前バッファをクリア
+            
+            // NUMLOCKがOFFの場合はONにする（Windowsで数字入力を有効化）
+            if (!host_keyboard_led_state().num_lock) {
+                tap_code(KC_NUM);
+            }
             return false;
 
         // M2: NIKOTOUCHレイヤー + かな（日本語ON）
@@ -607,9 +615,10 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             preconfirm_clear();  // レイヤー切替時は確定前バッファをクリア
             return false;
 
-        // M3: ARTSEY_ALPHAレイヤーに切り替え
+        // M3: ARTSEY_ALPHAレイヤーに切り替え + 英数（日本語OFF）
         case NK_M3:
             layer_move(NT_ARTSEY_ALPHA);
+            tap_code(KC_LNG2);  // 英数キー（日本語OFF）
             niko_clear();
             star_clear();
             preconfirm_clear();
@@ -644,6 +653,16 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
             register_code(KC_LSFT);
             tap_code(KC_ENT);
             unregister_code(KC_LSFT);
+            return false;
+
+        // Enter（M2行右端、コンボ用）- 単独押しはEnterとして動作
+        case NK_ENT:
+            tap_code(KC_ENT);
+            return false;
+
+        // Enter2（M4行右端、コンボ用）- 単独押しはEnterとして動作
+        case NK_ENT2:
+            tap_code(KC_ENT);
             return false;
 
         // * キー（濁音・半濁音変換）
@@ -718,6 +737,60 @@ bool process_record_nikotouch(uint16_t keycode, keyrecord_t *record) {
         case CMB_3BS:
             for (uint8_t i = 0; i < 4; i++) tap_code(KC_BSPC);
             preconfirm_backtrack(4);
+            return false;
+
+        // Space+Ent コンボ（NIKOTOUCH ⇔ ARTSEY_ALPHA 切り替え）
+        case CMB_LAYER_TOGGLE:
+            niko_clear();
+            star_clear();
+            preconfirm_clear();
+            if (layer_state_is(NT_NIKOTOUCH) || layer_state_is(NT_NIKOSHIFT)) {
+                // NIKOTOUCH → ARTSEY_ALPHA
+                layer_move(NT_ARTSEY_ALPHA);
+                tap_code(KC_LNG2);  // 英数キー（日本語OFF）
+            } else if (layer_state_is(NT_ARTSEY_ALPHA) || 
+                       layer_state_is(NT_ARTSEY_KAKO) || 
+                       layer_state_is(NT_ARTSEY_SYMBOL1) || 
+                       layer_state_is(NT_ARTSEY_SYMBOL2) || 
+                       layer_state_is(NT_ARTSEY_SYMBOL3)) {
+                // ARTSEY → NIKOTOUCH
+                layer_move(NT_NIKOTOUCH);
+                tap_code(KC_LNG1);  // かなキー（日本語ON）
+            }
+            return false;
+
+        // Space+Ent2 コンボ（BASE ⇔ 前レイヤー 切り替え）
+        case CMB_LAYER_BASE:
+            niko_clear();
+            star_clear();
+            preconfirm_clear();
+            if (layer_state_is(NT_BASE) || layer_state_is(NT_FN)) {
+                // BASE → 前レイヤーに戻る
+                layer_move(previous_layer);
+                if (previous_layer == NT_NIKOTOUCH) {
+                    tap_code(KC_LNG1);  // かなキー（日本語ON）
+                } else {
+                    tap_code(KC_LNG2);  // 英数キー（日本語OFF）
+                }
+            } else {
+                // 現在のレイヤーを記憶してBASEへ
+                if (layer_state_is(NT_NIKOTOUCH) || layer_state_is(NT_NIKOSHIFT)) {
+                    previous_layer = NT_NIKOTOUCH;
+                } else if (layer_state_is(NT_ARTSEY_ALPHA) || 
+                           layer_state_is(NT_ARTSEY_KAKO) || 
+                           layer_state_is(NT_ARTSEY_SYMBOL1) || 
+                           layer_state_is(NT_ARTSEY_SYMBOL2) || 
+                           layer_state_is(NT_ARTSEY_SYMBOL3)) {
+                    previous_layer = NT_ARTSEY_ALPHA;
+                }
+                layer_move(NT_BASE);
+                tap_code(KC_LNG2);  // 英数キー（日本語OFF）
+                
+                // NUMLOCKがOFFの場合はONにする（Windowsで数字入力を有効化）
+                if (!host_keyboard_led_state().num_lock) {
+                    tap_code(KC_NUM);
+                }
+            }
             return false;
 
         // ニコタッチ数字キー (NK_0 〜 NK_9)

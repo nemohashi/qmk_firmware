@@ -57,15 +57,19 @@ enum nikotouch_keycodes {
     NK_SENT,     // Shift + Enter（改行）
     NK_M1,       // M1: BASEレイヤー切替 + 英数
     NK_M2,       // M2: NIKOTOUCHレイヤー切替 + かな
-    NK_M3,       // M3: 未割り当て
+    NK_M3,       // M3: ARTSEY_ALPHAレイヤー切替
     NK_M4,       // M4: MO(FN)
     NK_M5,       // M5: LT(FN, NK_STAR)
+    NK_ENT,      // Enter（M2行右端、コンボ用）
+    NK_ENT2,     // Enter2（M4行右端、コンボ用）
     CMB_56,      // 5+6 コンボ（濁点変換）
     CMB_67,      // 6+7 コンボ（0キー相当）
     CMB_79,      // 7+9 コンボ（確定前バッファから残りを再入力）
     CMB_1BS,     // 1+BS コンボ（2文字削除）
     CMB_2BS,     // 2+BS コンボ（3文字削除）
     CMB_3BS,     // 3+BS コンボ（4文字削除）
+    CMB_LAYER_TOGGLE,  // Space+Ent コンボ（NIKOTOUCH⇔ARTSEY切替）
+    CMB_LAYER_BASE,    // Space+Ent2 コンボ（BASE⇔前レイヤー切替）
     NIKOTOUCH_SAFE_RANGE,  // キーマップ側で追加のキーコードを定義する場合に使用
 };
 
