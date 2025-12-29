@@ -34,6 +34,10 @@ static bool ar_dot_is_hold = false;   // .キーがホールドとして扱わ�
 
 #define ARTSEY_TAPPING_TERM 200       // タップ/ホールド判定時間（ms）
 
+// Shift状態管理
+static bool artsey_once_shift = false;    // Once Shift（次の1文字のみ大文字）
+static bool artsey_toggle_shift = false;  // Toggle Shift（ON/OFFトグル）
+
 // ============================================================
 // 状態クリア関数
 // ============================================================
@@ -48,6 +52,8 @@ void artsey_clear(void) {
     ar_minus_is_hold = false;
     ar_ent_is_hold = false;
     ar_dot_is_hold = false;
+    artsey_once_shift = false;
+    // Toggle Shiftはクリアしない（意図的に維持）
 }
 
 // ============================================================
@@ -61,6 +67,23 @@ static bool is_artsey_layer_active(void) {
            layer_state_is(NT_ARTSEY_SYMBOL1) ||
            layer_state_is(NT_ARTSEY_SYMBOL2) ||
            layer_state_is(NT_ARTSEY_SYMBOL3);
+}
+
+// アルファベットキーをShift状態を考慮して送信
+static void send_alpha_key(uint16_t keycode) {
+    // Toggle ShiftがONの場合、またはOnce ShiftがONの場合は大文字
+    if (artsey_toggle_shift || artsey_once_shift) {
+        register_code(KC_LSFT);
+        tap_code(keycode);
+        unregister_code(KC_LSFT);
+        
+        // Once Shiftは1文字送信後に解除
+        if (artsey_once_shift) {
+            artsey_once_shift = false;
+        }
+    } else {
+        tap_code(keycode);
+    }
 }
 
 // ============================================================
@@ -127,7 +150,7 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
                 // リリース時
                 if (!ar_1_is_hold) {
                     // タップとして扱う = "a"を出力
-                    tap_code(KC_A);
+                    send_alpha_key(KC_A);
                 } else {
                     // ホールドとして扱われた = KAKOレイヤーをオフ
                     layer_off(NT_ARTSEY_KAKO);
@@ -138,6 +161,13 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
             
         case AR_4:
             if (record->event.pressed) {
+                // .キーシフト中は左矢印
+                if (ar_dot_is_hold) {
+                    tap_code(KC_LEFT);
+                    ar_4_pressed = false;  // フラグをクリアしておく
+                    ar_4_is_hold = true;   // ホールド扱いにしてリリース時の出力をスキップ
+                    return false;
+                }
                 ar_4_pressed = true;
                 ar_4_timer = timer_read();
                 ar_4_is_hold = false;
@@ -145,12 +175,13 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
                 // リリース時
                 if (!ar_4_is_hold) {
                     // タップとして扱う = "e"を出力
-                    tap_code(KC_E);
+                    send_alpha_key(KC_E);
                 } else {
                     // ホールドとして扱われた = SYMBOL1レイヤーをオフ
                     layer_off(NT_ARTSEY_SYMBOL1);
                 }
                 ar_4_pressed = false;
+                ar_4_is_hold = false;  // 次回のためにリセット
             }
             return false;
         
@@ -163,7 +194,7 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
                 // リリース時
                 if (!ar_minus_is_hold) {
                     // タップとして扱う = "s"を出力
-                    tap_code(KC_S);
+                    send_alpha_key(KC_S);
                 } else {
                     // ホールドとして扱われた = SYMBOL2レイヤーをオフ
                     layer_off(NT_ARTSEY_SYMBOL2);
@@ -174,6 +205,13 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
         
         case AR_ENT:
             if (record->event.pressed) {
+                // .キーシフト中は右矢印
+                if (ar_dot_is_hold) {
+                    tap_code(KC_RIGHT);
+                    ar_ent_pressed = false;  // フラグをクリアしておく
+                    ar_ent_is_hold = true;   // ホールド扱いにしてリリース時の出力をスキップ
+                    return false;
+                }
                 ar_ent_pressed = true;
                 ar_ent_timer = timer_read();
                 ar_ent_is_hold = false;
@@ -181,12 +219,13 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
                 // リリース時
                 if (!ar_ent_is_hold) {
                     // タップとして扱う = "o"を出力
-                    tap_code(KC_O);
+                    send_alpha_key(KC_O);
                 } else {
                     // ホールドとして扱われた = SYMBOL3レイヤーをオフ
                     layer_off(NT_ARTSEY_SYMBOL3);
                 }
                 ar_ent_pressed = false;
+                ar_ent_is_hold = false;  // 次回のためにリセット
             }
             return false;
             
@@ -209,6 +248,15 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
             return false;
             
         case AR_ENT2:
+            // Enterをリピート対応で送信
+            if (record->event.pressed) {
+                register_code(KC_ENT);
+            } else {
+                unregister_code(KC_ENT);
+            }
+            return false;
+            
+        case AR_7:
             // Backspaceをリピート対応で送信
             if (record->event.pressed) {
                 register_code(KC_BSPC);
@@ -228,24 +276,36 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
         // ARTSEY_ALPHAレイヤー 単キー
         // ============================================================
         case AR_2:
-            tap_code(KC_R);
+            send_alpha_key(KC_R);
             return false;
         case AR_3:
-            tap_code(KC_T);
+            send_alpha_key(KC_T);
             return false;
         case AR_5:
-            tap_code(KC_Y);
+            if (record->event.pressed) {
+                // .キーシフト中は下矢印
+                if (ar_dot_is_hold) {
+                    tap_code(KC_DOWN);
+                } else {
+                    send_alpha_key(KC_Y);
+                }
+            }
             return false;
         case AR_6:
-            tap_code(KC_I);
-            return false;
+            if (record->event.pressed) {
+                // .キーシフト中は上矢印
+                if (ar_dot_is_hold) {
+                    tap_code(KC_UP);
+                } else {
+                    send_alpha_key(KC_I);
+                }
+            }
             return false;
         case AR_SPC:
             tap_code(KC_SPC);
             return false;
             
         // N/Aキー（何も送信しない）
-        case AR_7:
         case AR_8:
         case AR_9:
         case AR_STAR:
@@ -257,22 +317,22 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
         // ARTSEY_ALPHAレイヤー 2キーコンボ
         // ============================================================
         case CMB_AR_12:  // 1+2 = f
-            tap_code(KC_F);
+            send_alpha_key(KC_F);
             return false;
         case CMB_AR_23:  // 2+3 = g
-            tap_code(KC_G);
+            send_alpha_key(KC_G);
             return false;
         case CMB_AR_3M:  // 3+- = j
-            tap_code(KC_J);
+            send_alpha_key(KC_J);
             return false;
         case CMB_AR_45:  // 4+5 = c
-            tap_code(KC_C);
+            send_alpha_key(KC_C);
             return false;
         case CMB_AR_56:  // 5+6 = u
-            tap_code(KC_U);
+            send_alpha_key(KC_U);
             return false;
         case CMB_AR_6E:  // 6+Ent = n
-            tap_code(KC_N);
+            send_alpha_key(KC_N);
             return false;
         case CMB_AR_14:  // 1+4 = Enter
             tap_code(KC_ENT);
@@ -291,25 +351,25 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
             unregister_code(KC_LSFT);
             return false;
         case CMB_AR_1M:  // 1+- = w
-            tap_code(KC_W);
+            send_alpha_key(KC_W);
             return false;
         case CMB_AR_4E:  // 4+Ent = b
-            tap_code(KC_B);
+            send_alpha_key(KC_B);
             return false;
         case CMB_AR_2M:  // 2+- = v
-            tap_code(KC_V);
+            send_alpha_key(KC_V);
             return false;
         case CMB_AR_46:  // 4+6 = h
-            tap_code(KC_H);
+            send_alpha_key(KC_H);
             return false;
         case CMB_AR_5E:  // 5+Ent = k
-            tap_code(KC_K);
+            send_alpha_key(KC_K);
             return false;
         case CMB_AR_15:  // 1+5 = ,
             tap_code(KC_COMM);
             return false;
-        case CMB_AR_26:  // 2+6 = Backspace
-            tap_code(KC_BSPC);
+        case CMB_AR_26:  // 2+6 = Delete
+            tap_code(KC_DEL);
             return false;
         case CMB_AR_16:  // 1+6 = .
             tap_code(KC_DOT);
@@ -317,27 +377,30 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
         case CMB_AR_1E:  // 1+Ent = /
             tap_code(KC_SLSH);
             return false;
+        case CMB_AR_24:  // 2+4 = Backspace（新規）
+            tap_code(KC_BSPC);
+            return false;
             
         // ============================================================
         // ARTSEY_ALPHAレイヤー 3キーコンボ
         // ============================================================
         case CMB_AR_123:  // 1+2+3 = d
-            tap_code(KC_D);
+            send_alpha_key(KC_D);
             return false;
         case CMB_AR_56E:  // 5+6+Ent = m
-            tap_code(KC_M);
+            send_alpha_key(KC_M);
             return false;
         case CMB_AR_13M:  // 1+3+- = q
-            tap_code(KC_Q);
+            send_alpha_key(KC_Q);
             return false;
         case CMB_AR_46E:  // 4+6+Ent = p
-            tap_code(KC_P);
+            send_alpha_key(KC_P);
             return false;
         case CMB_AR_23M:  // 2+3+- = x
-            tap_code(KC_X);
+            send_alpha_key(KC_X);
             return false;
         case CMB_AR_456:  // 4+5+6 = l
-            tap_code(KC_L);
+            send_alpha_key(KC_L);
             return false;
             
         // ============================================================
@@ -347,7 +410,19 @@ bool process_record_artsey(uint16_t keycode, keyrecord_t *record) {
             tap_code(KC_SPC);
             return false;
         case CMB_AR_123M:  // 1+2+3+- = z
-            tap_code(KC_Z);
+            send_alpha_key(KC_Z);
+            return false;
+        case CMB_AR_12E:  // 1+2+Ent = Esc（新規）
+            tap_code(KC_ESC);
+            return false;
+        case CMB_AR_123E:  // 1+2+3+Ent = Tab（新規）
+            tap_code(KC_TAB);
+            return false;
+        case CMB_AR_423M:  // 4+2+3+- = Once Shift（新規）
+            artsey_once_shift = true;
+            return false;
+        case CMB_AR_156E:  // 1+5+6+Ent = Toggle Shift（新規）
+            artsey_toggle_shift = !artsey_toggle_shift;
             return false;
             
         // ============================================================

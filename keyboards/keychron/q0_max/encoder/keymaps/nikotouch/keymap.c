@@ -53,9 +53,10 @@ enum combos {
     COMBO_AR_46,    // 4+6 = h
     COMBO_AR_5E,    // 5+Ent = k
     COMBO_AR_15,    // 1+5 = ,
-    COMBO_AR_26,    // 2+6 = Backspace
+    COMBO_AR_26,    // 2+6 = Delete
     COMBO_AR_16,    // 1+6 = .
     COMBO_AR_1E,    // 1+Ent = /
+    COMBO_AR_24,    // 2+4 = Backspace（新規）
     
     // Artseyコンボ 3キー
     COMBO_AR_123,   // 1+2+3 = d
@@ -64,10 +65,14 @@ enum combos {
     COMBO_AR_46E,   // 4+6+Ent = p
     COMBO_AR_23M,   // 2+3+- = x
     COMBO_AR_456,   // 4+5+6 = l
+    COMBO_AR_12E,   // 1+2+Ent = Esc（新規）
     
     // Artseyコンボ 4キー
     COMBO_AR_456E,  // 4+5+6+Ent = Space
     COMBO_AR_123M,  // 1+2+3+- = z
+    COMBO_AR_123E,  // 1+2+3+Ent = Tab（新規）
+    COMBO_AR_423M,  // 4+2+3+- = Once Shift（新規）
+    COMBO_AR_156E,  // 1+5+6+Ent = Toggle Shift（新規）
     
     COMBO_COUNT
 };
@@ -111,6 +116,7 @@ const uint16_t PROGMEM combo_ar_15[] = {AR_1, AR_5, COMBO_END};
 const uint16_t PROGMEM combo_ar_26[] = {AR_2, AR_6, COMBO_END};
 const uint16_t PROGMEM combo_ar_16[] = {AR_1, AR_6, COMBO_END};
 const uint16_t PROGMEM combo_ar_1e[] = {AR_1, AR_ENT, COMBO_END};
+const uint16_t PROGMEM combo_ar_24[] = {AR_2, AR_4, COMBO_END};  // 新規
 
 // Artseyコンボキー定義（3キー）
 const uint16_t PROGMEM combo_ar_123[] = {AR_1, AR_2, AR_3, COMBO_END};
@@ -119,10 +125,14 @@ const uint16_t PROGMEM combo_ar_13m[] = {AR_1, AR_3, AR_MINUS, COMBO_END};
 const uint16_t PROGMEM combo_ar_46e[] = {AR_4, AR_6, AR_ENT, COMBO_END};
 const uint16_t PROGMEM combo_ar_23m[] = {AR_2, AR_3, AR_MINUS, COMBO_END};
 const uint16_t PROGMEM combo_ar_456[] = {AR_4, AR_5, AR_6, COMBO_END};
+const uint16_t PROGMEM combo_ar_12e[] = {AR_1, AR_2, AR_ENT, COMBO_END};  // 新規
 
 // Artseyコンボキー定義（4キー）
 const uint16_t PROGMEM combo_ar_456e[] = {AR_4, AR_5, AR_6, AR_ENT, COMBO_END};
 const uint16_t PROGMEM combo_ar_123m[] = {AR_1, AR_2, AR_3, AR_MINUS, COMBO_END};
+const uint16_t PROGMEM combo_ar_123e[] = {AR_1, AR_2, AR_3, AR_ENT, COMBO_END};  // 新規
+const uint16_t PROGMEM combo_ar_423m[] = {AR_4, AR_2, AR_3, AR_MINUS, COMBO_END};  // 新規
+const uint16_t PROGMEM combo_ar_156e[] = {AR_1, AR_5, AR_6, AR_ENT, COMBO_END};  // 新規
 
 combo_t key_combos[COMBO_COUNT] = {
     // NIKOTOUCHコンボ
@@ -164,6 +174,7 @@ combo_t key_combos[COMBO_COUNT] = {
     [COMBO_AR_26] = COMBO(combo_ar_26, CMB_AR_26),
     [COMBO_AR_16] = COMBO(combo_ar_16, CMB_AR_16),
     [COMBO_AR_1E] = COMBO(combo_ar_1e, CMB_AR_1E),
+    [COMBO_AR_24] = COMBO(combo_ar_24, CMB_AR_24),  // 新規
     
     // Artseyコンボ 3キー
     [COMBO_AR_123] = COMBO(combo_ar_123, CMB_AR_123),
@@ -172,10 +183,14 @@ combo_t key_combos[COMBO_COUNT] = {
     [COMBO_AR_46E] = COMBO(combo_ar_46e, CMB_AR_46E),
     [COMBO_AR_23M] = COMBO(combo_ar_23m, CMB_AR_23M),
     [COMBO_AR_456] = COMBO(combo_ar_456, CMB_AR_456),
+    [COMBO_AR_12E] = COMBO(combo_ar_12e, CMB_AR_12E),  // 新規
     
     // Artseyコンボ 4キー
     [COMBO_AR_456E] = COMBO(combo_ar_456e, CMB_AR_456E),
     [COMBO_AR_123M] = COMBO(combo_ar_123m, CMB_AR_123M),
+    [COMBO_AR_123E] = COMBO(combo_ar_123e, CMB_AR_123E),  // 新規
+    [COMBO_AR_423M] = COMBO(combo_ar_423m, CMB_AR_423M),  // 新規
+    [COMBO_AR_156E] = COMBO(combo_ar_156e, CMB_AR_156E),  // 新規
 };
 
 // コンボのタイミング設定
@@ -209,8 +224,8 @@ bool combo_should_trigger(uint16_t combo_index, combo_t *combo, uint16_t keycode
         return layer_state_is(NT_BASE) || layer_state_is(NT_FN);
     }
     
-    // Artseyコンボ（COMBO_AR_12～COMBO_AR_123M）
-    if (combo_index >= COMBO_AR_12 && combo_index <= COMBO_AR_123M) {
+    // Artseyコンボ（COMBO_AR_12～COMBO_AR_156E）
+    if (combo_index >= COMBO_AR_12 && combo_index <= COMBO_AR_156E) {
         return layer_state_is(NT_ARTSEY_ALPHA) || 
                layer_state_is(NT_ARTSEY_KAKO);
     }

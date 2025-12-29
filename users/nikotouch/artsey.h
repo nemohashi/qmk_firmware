@@ -106,9 +106,10 @@ enum artsey_keycodes {
     CMB_AR_46,    // 4+6 = h
     CMB_AR_5E,    // 5+Ent = k
     CMB_AR_15,    // 1+5 = ,
-    CMB_AR_26,    // 2+6 = Backspace
+    CMB_AR_26,    // 2+6 = Delete
     CMB_AR_16,    // 1+6 = .
     CMB_AR_1E,    // 1+Ent = /
+    CMB_AR_24,    // 2+4 = Backspace（新規）
     
     // ARTSEY_ALPHAレイヤー 3キーコンボ
     CMB_AR_123,   // 1+2+3 = d
@@ -117,10 +118,14 @@ enum artsey_keycodes {
     CMB_AR_46E,   // 4+6+Ent = p
     CMB_AR_23M,   // 2+3+- = x
     CMB_AR_456,   // 4+5+6 = l
+    CMB_AR_12E,   // 1+2+Ent = Esc（新規）
     
     // ARTSEY_ALPHAレイヤー 4キーコンボ
     CMB_AR_456E,  // 4+5+6+Ent = Space
     CMB_AR_123M,  // 1+2+3+- = z
+    CMB_AR_123E,  // 1+2+3+Ent = Tab（新規）
+    CMB_AR_423M,  // 4+2+3+- = Once Shift（新規）
+    CMB_AR_156E,  // 1+5+6+Ent = Toggle Shift（新規）
     
     // ARTSEY_KAKOレイヤー（コンボなし - 単キーのみ）
     // コンボは削除（新仕様ではSYMBOL1/2/3に分割、コンボなし）
